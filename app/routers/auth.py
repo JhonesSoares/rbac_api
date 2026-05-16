@@ -4,11 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import (
+    blacklist_token,
     create_access_token,
+    get_current_user,
     verify_password,
 )
 from app.models.user import User
-from app.schemas.user import LoginRequest, TokenResponse, UserResponse
+from app.schemas.user import LoginRequest, MessageResponse, TokenResponse, UserResponse
 
 router = APIRouter()
 
@@ -41,3 +43,26 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         access_token=token,
         user=UserResponse.model_validate(user),
     )
+
+
+@router.post(
+    "/logout",
+    response_model=MessageResponse,
+    summary="Logout do usuário",
+    description="Invalida o token JWT atual adicionando-o à blacklist.",
+)
+async def logout(current=Depends(get_current_user)):
+    _, token = current
+    blacklist_token(token)
+    return MessageResponse(message="Logout realizado com sucesso.")
+
+
+@router.get(
+    "/my_data",
+    response_model=UserResponse,
+    summary="Dados do usuário atual",
+    description="Retorna os dados do usuário autenticado.",
+)
+async def me(current=Depends(get_current_user)):
+    user, _ = current
+    return UserResponse.model_validate(user)
