@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False
+)
 bearer_scheme = HTTPBearer()
 
 # In-memory token blacklist (use Redis in production)
@@ -60,7 +62,11 @@ async def blacklist_token(token: str):
 
 
 async def is_token_blacklisted(token: str) -> bool:
-    return await redis_client.exists(f"blacklist:{token}") > 0
+    exists = await redis_client.exists(f"blacklist:{token}")
+    print(
+        f"Verificando token no Redis. Chave: blacklist:{token[:10]}... Resultado do exists: {exists}"
+    )
+    return bool(exists)
 
 
 # def blacklist_token(token: str):
@@ -79,7 +85,7 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    if is_token_blacklisted(token):
+    if await is_token_blacklisted(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token revogado. Faça login novamente.",

@@ -41,6 +41,13 @@ services:
       db:
         condition: service_healthy # Aguarda o banco ficar pronto
 
+  redis: # <--- ESSE NOME DEVE SER EXATAMENTE "redis"
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - rbac_network
+
 volumes:
   postgres_data:
     driver: local

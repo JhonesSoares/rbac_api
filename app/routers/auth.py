@@ -75,7 +75,10 @@ async def me(current=Depends(get_current_user)):
     description="Retorna um novo Token do usuário autenticado.",
 )
 async def refresh_token(current=Depends(get_current_user)):
-    user, _ = current
+    user, old_token = current
+
+    blacklist_token(old_token)
+
     new_token = create_access_token({"sub": str(user.id), "role": user.role})
 
     return TokenResponse(
