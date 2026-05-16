@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Set
+from datetime import datetime, time, timedelta, timezone
+from typing import Optional
 
+import redis.asyncio as redis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -15,7 +16,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
 # In-memory token blacklist (use Redis in production)
-token_blacklist: Set[str] = set()
+redis_client = redis.from_url("redis://redis:6379")
 
 
 def hash_password(password: str) -> str:
@@ -50,12 +51,24 @@ def decode_token(token: str) -> dict:
 
 
 # invalidar reutilização de Token
-def blacklist_token(token: str):
-    token_blacklist.add(token)
+async def blacklist_token(token: str):
+    payload = decode_token(token)
+    exp = payload["exp"]
+    ttl = exp - int(time.time())
+    if ttl > 0:
+        await redis_client.setex(f"blacklist:{token}", ttl, "1")
 
 
-def is_token_blacklisted(token: str) -> bool:
-    return token in token_blacklist
+async def is_token_blacklisted(token: str) -> bool:
+    return await redis_client.exists(f"blacklist:{token}") > 0
+
+
+# def blacklist_token(token: str):
+#    token_blacklist.add(token)
+
+
+# def is_token_blacklisted(token: str) -> bool:
+#    return token in token_blacklist
 
 
 async def get_current_user(
