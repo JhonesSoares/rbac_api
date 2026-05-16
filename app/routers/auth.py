@@ -66,3 +66,19 @@ async def logout(current=Depends(get_current_user)):
 async def me(current=Depends(get_current_user)):
     user, _ = current
     return UserResponse.model_validate(user)
+
+
+@router.get(
+    "/refresh_token",
+    response_model=TokenResponse,
+    summary="Atualiza Token",
+    description="Retorna um novo Token do usuário autenticado.",
+)
+async def refresh_token(current=Depends(get_current_user)):
+    user, _ = current
+    new_token = create_access_token({"sub": str(user.id), "role": user.role})
+
+    return TokenResponse(
+        access_token=new_token,
+        user=UserResponse.model_validate(user),
+    )

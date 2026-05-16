@@ -37,7 +37,6 @@ async def create_user(
         role=payload.role,
     )
     db.add(user)
-    await db.flush()
-    await db.commit()
-    await db.refresh(user)
+    await db.flush()  # Gera o ID no banco de dados
+    await db.refresh(user)  # Atualiza o objeto Python com os dados do banco
     return UserResponse.model_validate(user)

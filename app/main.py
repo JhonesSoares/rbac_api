@@ -22,10 +22,10 @@ app = FastAPI(
 
 ### Perfis de Acesso
 - **Admin**: Pode criar, listar e visualizar todos os usuários.
-- **User**: Pode apenas fazer login/logout e visualizar seus próprios dados.
+- **User**: Pode apenas fazer api/v1/login/logout e visualizar seus próprios dados.
 
 ### Autenticação
-Use o endpoint `/auth/login` para obter um token JWT e inclua-o no header:
+Use o endpoint `/api/v1/auth/login` para obter um token JWT e inclua-o no header:
 `Authorization: Bearer <token>`
     """,
     version="1.0.0",
@@ -39,6 +39,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(users.router, prefix="/users", tags=["Users"])
+api_version = "/api/v1"
+app.include_router(auth.router, prefix=f"{api_version}/auth", tags=["Authentication"])
+app.include_router(users.router, prefix=f"{api_version}/users", tags=["Users"])
