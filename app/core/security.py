@@ -1,7 +1,6 @@
-from datetime import datetime, time, timedelta, timezone
-from typing import Optional
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Set
 
-import redis.asyncio as redis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -18,7 +17,8 @@ pwd_context = CryptContext(
 bearer_scheme = HTTPBearer()
 
 # In-memory token blacklist (use Redis in production)
-redis_client = redis.from_url("redis://redis:6379")
+token_blacklist: Set[str] = set()
+# redis_client = redis.from_url("redis://redis:6379")
 
 
 def hash_password(password: str) -> str:
@@ -53,28 +53,28 @@ def decode_token(token: str) -> dict:
 
 
 # invalidar reutilização de Token
-async def blacklist_token(token: str):
-    payload = decode_token(token)
-    exp = payload["exp"]
-    ttl = exp - int(time.time())
-    if ttl > 0:
-        await redis_client.setex(f"blacklist:{token}", ttl, "1")
-
-
-async def is_token_blacklisted(token: str) -> bool:
-    exists = await redis_client.exists(f"blacklist:{token}")
-    print(
-        f"Verificando token no Redis. Chave: blacklist:{token[:10]}... Resultado do exists: {exists}"
-    )
-    return bool(exists)
-
-
 # def blacklist_token(token: str):
-#    token_blacklist.add(token)
+#    payload = decode_token(token)
+#    exp = payload["exp"]
+#    ttl = exp - int(time.time())
+#    if ttl > 0:
+#        redis_client.setex(f"blacklist:{token}", ttl, "1")
 
 
 # def is_token_blacklisted(token: str) -> bool:
-#    return token in token_blacklist
+#    exists = redis_client.exists(f"blacklist:{token}")
+#    print(
+#        f"Verificando token no Redis. Chave: blacklist:{token[:10]}... Resultado do exists: {exists}"
+#    )
+#    return bool(exists)
+
+
+def blacklist_token(token: str):
+    token_blacklist.add(token)
+
+
+def is_token_blacklisted(token: str) -> bool:
+    return token in token_blacklist
 
 
 async def get_current_user(
@@ -85,7 +85,7 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    if await is_token_blacklisted(token):
+    if is_token_blacklisted(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token revogado. Faça login novamente.",

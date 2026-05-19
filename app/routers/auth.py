@@ -77,9 +77,9 @@ async def me(current=Depends(get_current_user)):
 async def refresh_token(current=Depends(get_current_user)):
     user, old_token = current
 
-    blacklist_token(old_token)
-
     new_token = create_access_token({"sub": str(user.id), "role": user.role})
+
+    blacklist_token(old_token)
 
     return TokenResponse(
         access_token=new_token,

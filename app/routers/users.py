@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "/add",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="[Admin] Criar novo usuário",
@@ -40,3 +42,18 @@ async def create_user(
     await db.flush()  # Gera o ID no banco de dados
     await db.refresh(user)  # Atualiza o objeto Python com os dados do banco
     return UserResponse.model_validate(user)
+
+
+@router.get(
+    "/list_users",
+    response_model=List[UserResponse],
+    summary="[Admin] Listar todos os usuários",
+    description="**Requer perfil Admin.** Retorna a lista completa de usuários.",
+)
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    current=Depends(require_admin),
+):
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+    return [UserResponse.model_validate(u) for u in users]
