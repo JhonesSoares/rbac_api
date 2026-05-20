@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.database import Base, engine
 from app.routers import auth, users
@@ -42,3 +44,15 @@ app.add_middleware(
 api_version = "/api/v1"
 app.include_router(auth.router, prefix=f"{api_version}/auth", tags=["Authentication"])
 app.include_router(users.router, prefix=f"{api_version}/users", tags=["Users"])
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def serve_spa():
+    return FileResponse("frontend/index.html")
+
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "healthy", "version": "1.0.0"}
